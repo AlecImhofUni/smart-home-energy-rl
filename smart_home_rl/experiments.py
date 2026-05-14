@@ -382,6 +382,136 @@ def train_q_learning_agent(
 
     return agent, training_history
 
+def run_multi_seed_experiments(
+    config: Config,
+    appliances: list[ApplianceConfig] | None = None,
+    num_runs: int = 10,
+    base_seed: int | None = None,
+    fixed_evaluation_days: bool = True,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Run the full agent comparison over several independent random seeds.
+
+    Each run trains a new Q-learning agent, evaluates it against the heuristic
+    baselines, and stores the resulting metrics.
+
+    Parameters
+    ----------
+    config:
+        Global project configuration.
+
+    appliances:
+        List of appliances used in the environment.
+
+    num_runs:
+        Number of independent runs.
+
+    base_seed:
+        Base seed used to derive training and evaluation seeds.
+
+    fixed_evaluation_days:
+        If True, all runs are evaluated on the same generated test days.
+        This isolates the variability due to Q-learning training.
+        If False, each run gets its own evaluation days.
+
+    Returns
+    -------
+    multi_seed_summary:
+        Mean and standard deviation of each metric for each agent.
+
+    multi_seed_per_run:
+        Raw per-run summary results for each agent.
+    """
+
+    if appliances is None:
+        appliances = DEFAULT_APPLIANCES
+
+    if base_seed is None:
+        base_seed = config.seed + 10_000
+
+    per_run_records = []
+
+    if fixed_evaluation_days:
+        shared_evaluation_days = generate_days(
+            config=config,
+            num_days=config.eval_days,
+            seed=base_seed + 1_000,
+            appliances=appliances,
+        )
+    else:
+        shared_evaluation_days = None
+
+    for run_id in range(num_runs):
+        run_seed = base_seed + run_id
+
+        q_agent, _ = train_q_learning_agent(
+            config=config,
+            appliances=appliances,
+            num_episodes=config.episodes,
+            seed=run_seed,
+        )
+
+        q_agent.set_eval_mode()
+
+        if fixed_evaluation_days:
+            evaluation_days = shared_evaluation_days
+        else:
+            evaluation_days = generate_days(
+                config=config,
+                num_days=config.eval_days,
+                seed=base_seed + 1_000 + run_id,
+                appliances=appliances,
+            )
+
+        env = SmartHomeEnv(config, appliances)
+
+        agents = [
+            RunImmediatelyAgent(),
+            CheapestHourAgent(),
+            SolarGreedyAgent(),
+            q_agent,
+        ]
+
+        run_summary, _ = evaluate_agents(
+            agents=agents,
+            env=env,
+            days=evaluation_days,
+        )
+
+        run_summary = run_summary.copy()
+        run_summary.insert(0, "run_id", run_id)
+        run_summary.insert(1, "seed", run_seed)
+
+        per_run_records.append(run_summary)
+
+    multi_seed_per_run = pd.concat(per_run_records, ignore_index=True)
+
+    metric_columns = [
+        column
+        for column in multi_seed_per_run.columns
+        if column not in ["run_id", "seed", "agent"]
+    ]
+
+    summary_parts = []
+
+    for metric in metric_columns:
+        metric_summary = (
+            multi_seed_per_run
+            .groupby("agent")[metric]
+            .agg(["mean", "std"])
+            .rename(
+                columns={
+                    "mean": f"{metric}_mean",
+                    "std": f"{metric}_std",
+                }
+            )
+        )
+
+        summary_parts.append(metric_summary)
+
+    multi_seed_summary = pd.concat(summary_parts, axis=1).reset_index()
+
+    return multi_seed_summary, multi_seed_per_run
 
 def plot_training_curve(training_history: pd.DataFrame, results_dir: Path) -> list[Path]:
     """
