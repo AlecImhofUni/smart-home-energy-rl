@@ -291,7 +291,7 @@ class SmartHomeEnv:
 
         power = request["power"]
         prices = self.day_data["prices"][start_hour:end_hour]
-        solar = self.day_data.get("solar_actual", self.day_data["solar"])[start_hour:end_hour]
+        solar = self.day_data["solar"][start_hour:end_hour]
 
         already_scheduled_load = self.scheduled_load[start_hour:end_hour]
 
@@ -346,7 +346,7 @@ class SmartHomeEnv:
         hour = min(self.current_hour, self.config.horizon - 1)
 
         price = float(self.day_data["prices"][hour])
-        solar = float(self.day_data.get("solar_actual", self.day_data["solar"])[hour])
+        solar = float(self.day_data["solar"][hour])
 
         state_parts = [
             hour,
@@ -530,7 +530,7 @@ class SmartHomeEnv:
         end_hour = start_hour + request["duration"]
 
         prices = self.day_data["prices"][start_hour:end_hour]
-        solar = self.day_data.get("solar_forecast", self.day_data["solar"])[start_hour:end_hour]
+        solar = self.day_data["solar"][start_hour:end_hour]
         already_scheduled_load = self.scheduled_load[start_hour:end_hour]
 
         available_solar = np.maximum(solar - already_scheduled_load, 0.0)
@@ -546,7 +546,7 @@ class SmartHomeEnv:
 
         end_hour = start_hour + request["duration"]
 
-        solar = self.day_data.get("solar_forecast", self.day_data["solar"])[start_hour:end_hour]
+        solar = self.day_data["solar"][start_hour:end_hour]
         already_scheduled_load = self.scheduled_load[start_hour:end_hour]
 
         available_solar = np.maximum(solar - already_scheduled_load, 0.0)

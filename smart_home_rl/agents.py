@@ -171,7 +171,7 @@ class CheapestHourAgent(BaseAgent):
         end_hour = start_hour + request["duration"]
 
         prices = env.day_data["prices"][start_hour:end_hour]
-        solar = env.day_data.get("solar_forecast", env.day_data["solar"])[start_hour:end_hour]
+        solar = env.day_data["solar"][start_hour:end_hour]
         already_scheduled_load = env.scheduled_load[start_hour:end_hour]
 
         available_solar = np.maximum(solar - already_scheduled_load, 0.0)
@@ -262,7 +262,7 @@ class SolarGreedyAgent(BaseAgent):
 
         end_hour = start_hour + request["duration"]
 
-        solar = env.day_data.get("solar_forecast", env.day_data["solar"])[start_hour:end_hour]
+        solar = env.day_data["solar"][start_hour:end_hour]
         already_scheduled_load = env.scheduled_load[start_hour:end_hour]
 
         available_solar = np.maximum(solar - already_scheduled_load, 0.0)
