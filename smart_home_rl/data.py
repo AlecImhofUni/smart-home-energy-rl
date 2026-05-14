@@ -124,6 +124,36 @@ def generate_solar_profile(
 
     return solar
 
+def generate_solar_forecast(
+    config: Config,
+    rng: np.random.Generator,
+    solar_actual: np.ndarray,
+) -> np.ndarray:
+    """
+    Generate a noisy solar production forecast.
+
+    The actual solar profile represents what really happens during the day.
+    The forecast represents what the controller expects before making decisions.
+
+    This models exogenous uncertainty such as unexpected cloud cover.
+    """
+
+    relative_error = rng.normal(
+        0.0,
+        config.solar_forecast_relative_error,
+        size=config.horizon,
+    )
+
+    absolute_error = rng.normal(
+        0.0,
+        config.solar_forecast_absolute_error,
+        size=config.horizon,
+    )
+
+    solar_forecast = solar_actual * (1.0 + relative_error) + absolute_error
+    solar_forecast = np.clip(solar_forecast, 0.0, None)
+
+    return solar_forecast
 
 def _weighted_hour_sample(
     rng: np.random.Generator,
@@ -258,18 +288,31 @@ def generate_day(
 ) -> dict:
     """
     Generate all exogenous data for one simulated day.
+
+    The returned dictionary contains both:
+    - solar_actual: the realized solar production used for real cost computation,
+    - solar_forecast: the noisy forecast used by agents for planning.
+
+    The key 'solar' is kept as an alias for solar_actual for backward compatibility.
     """
 
     day_type = get_day_type(day_index)
     weather_type = sample_weather_type(rng)
 
+    prices = generate_price_profile(config, rng, day_type)
+    solar_actual = generate_solar_profile(config, rng, weather_type)
+    solar_forecast = generate_solar_forecast(config, rng, solar_actual)
+    requests = generate_appliance_requests(config, rng, appliances, day_type)
+
     return {
         "day_index": day_index,
         "day_type": day_type,
         "weather_type": weather_type,
-        "prices": generate_price_profile(config, rng, day_type),
-        "solar": generate_solar_profile(config, rng, weather_type),
-        "requests": generate_appliance_requests(config, rng, appliances, day_type),
+        "prices": prices,
+        "solar": solar_actual,
+        "solar_actual": solar_actual,
+        "solar_forecast": solar_forecast,
+        "requests": requests,
     }
 
 
@@ -307,6 +350,12 @@ def build_day_summary(days: list[dict]) -> pd.DataFrame:
             for request in day["requests"]
         )
 
+        solar_actual = day.get("solar_actual", day["solar"])
+        solar_forecast = day.get("solar_forecast", solar_actual)
+        mean_abs_solar_forecast_error = float(
+            np.mean(np.abs(solar_forecast - solar_actual))
+        )
+
         records.append(
             {
                 "day_index": day["day_index"],
@@ -318,6 +367,7 @@ def build_day_summary(days: list[dict]) -> pd.DataFrame:
                 "max_solar": float(np.max(day["solar"])),
                 "num_requests": len(day["requests"]),
                 "requested_energy_kwh": requested_energy,
+                "mean_abs_solar_forecast_error": mean_abs_solar_forecast_error,
             }
         )
 

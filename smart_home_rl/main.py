@@ -41,7 +41,9 @@ from smart_home_rl.experiments import (
     plot_training_curve,
     run_reward_ablation_study,
     run_robustness_study,
+    run_multi_seed_experiments,
     train_q_learning_agent,
+    
 )
 
 
@@ -209,6 +211,21 @@ def main() -> None:
             results_dir=config.results_dir,
         )
     )
+
+    # Run multi-seed experiments for more robust agent comparison.
+    multi_seed_summary, multi_seed_per_run = run_multi_seed_experiments(
+        config=config,
+        appliances=DEFAULT_APPLIANCES,
+        num_runs=5,
+        base_seed=config.seed + 10_000,
+        fixed_evaluation_days=True,
+    )
+
+    multi_seed_summary_path = config.results_dir / "multi_seed_summary.csv"
+    multi_seed_per_run_path = config.results_dir / "multi_seed_per_run.csv"
+
+    multi_seed_summary.to_csv(multi_seed_summary_path, index=False)
+    multi_seed_per_run.to_csv(multi_seed_per_run_path, index=False)
 
     # Run reward ablation study for Q-learning.
     ablation_summary, ablation_per_day, ablation_training_history = run_reward_ablation_study(

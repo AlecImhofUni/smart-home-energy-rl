@@ -63,6 +63,10 @@ class Config:
     solar_peak: float = 3.0
     solar_noise: float = 0.15
 
+    # Solar forecast uncertainty parameters
+    solar_forecast_relative_error: float = 0.25
+    solar_forecast_absolute_error: float = 0.10
+
     # Reward parameters
     cost_weight: float = 1.0
     delay_weight: float = 0.02
