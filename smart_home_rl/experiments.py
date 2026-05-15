@@ -291,6 +291,65 @@ def evaluate_agents(agents: list, env, days: list[dict]) -> tuple[pd.DataFrame, 
 
     return summary_df, per_day_df
 
+def bootstrap_confidence_intervals(
+    per_day_df: pd.DataFrame,
+    metrics: list[str] | None = None,
+    group_column: str = "agent",
+    n_bootstrap: int = 10_000,
+    confidence_level: float = 0.95,
+    seed: int = 42,
+) -> pd.DataFrame:
+    """
+    Compute bootstrap confidence intervals for evaluation metrics.
+
+    The bootstrap resamples evaluation days with replacement within each agent.
+    This estimates the uncertainty of the mean performance over the test set.
+    """
+
+    if metrics is None:
+        metrics = [
+            "total_cost",
+            "renewable_usage_ratio",
+            "average_delay",
+            "missed_deadlines",
+            "total_reward",
+        ]
+
+    rng = np.random.default_rng(seed)
+    alpha = 1.0 - confidence_level
+
+    records = []
+
+    for group_value, group_df in per_day_df.groupby(group_column):
+        n = len(group_df)
+
+        for metric in metrics:
+            values = group_df[metric].to_numpy(dtype=float)
+
+            bootstrap_means = np.empty(n_bootstrap)
+
+            for i in range(n_bootstrap):
+                sample = rng.choice(values, size=n, replace=True)
+                bootstrap_means[i] = sample.mean()
+
+            mean_value = values.mean()
+            lower = np.quantile(bootstrap_means, alpha / 2.0)
+            upper = np.quantile(bootstrap_means, 1.0 - alpha / 2.0)
+
+            records.append(
+                {
+                    group_column: group_value,
+                    "metric": metric,
+                    "mean": mean_value,
+                    "ci_lower": lower,
+                    "ci_upper": upper,
+                    "confidence_level": confidence_level,
+                    "n_bootstrap": n_bootstrap,
+                    "n_observations": n,
+                }
+            )
+
+    return pd.DataFrame.from_records(records)
 
 def train_q_learning_agent(
     config: Config,

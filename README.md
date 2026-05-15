@@ -155,7 +155,16 @@ This avoids unrealistic demand generation and makes the scheduling problem meani
 
 ## MDP formulation
 
-Each episode represents one simulated day with a 24-hour horizon.
+We model the smart-home scheduling problem as a finite-horizon Markov Decision Process.
+
+- **Episode:** one simulated day of 24 hourly time steps.
+- **State:** the current hour, electricity price level, solar production level, and pending appliance requests with their deadlines.
+- **Actions:** either wait or start one of the currently available appliance jobs.
+- **Transition dynamics:** the environment advances by one hour, updates pending requests, and generates new stochastic appliance demands.
+- **Reward:** the reward combines electricity cost, delay penalties, deadline penalties, and incentives for using available solar energy.
+- **Objective:** learn a policy that minimizes total daily energy cost while maintaining acceptable user comfort and respecting appliance deadlines.
+
+This formulation assumes that electricity prices and solar availability are known or forecasted at the hourly level.
 
 ### State
 
@@ -343,6 +352,21 @@ The tested scenarios are:
 This tests whether the learned policy generalizes beyond the exact training distribution.
 
 ---
+### Statistical confidence
+
+To make the evaluation more robust, the project reports bootstrap confidence intervals for the main metrics. Instead of relying only on average performance over evaluation days, the confidence intervals estimate the uncertainty around the measured results by resampling the evaluation episodes.
+
+This is used to better assess whether the observed differences between agents are meaningful and reproducible.
+
+---
+
+### Multi-seed evaluation
+
+To evaluate the reproducibility of the learning results, Q-learning is trained and evaluated over multiple random seeds. This allows us to check whether the observed performance is stable or whether it strongly depends on a lucky or unlucky training run.
+
+The heuristic baselines are also included in the multi-seed comparison. Since they are deterministic when evaluated on the same fixed test days, their standard deviation can be zero. This is expected and helps isolate the variability introduced by the learning algorithm.
+
+---
 
 ## Result files
 
@@ -373,6 +397,19 @@ agent_average_delay.png
 agent_renewable_usage_ratio.png
 agent_total_reward.png
 agent_cost_delay_tradeoff.png
+```
+
+### Statistical confidence outputs
+
+```text
+bootstrap_confidence_intervals.csv
+```
+
+### Multi-seed outputs
+
+```text
+multi_seed_summary.csv
+multi_seed_per_run.csv
 ```
 
 ### Scenario analysis outputs

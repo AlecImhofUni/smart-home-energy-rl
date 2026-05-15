@@ -32,6 +32,7 @@ from smart_home_rl.experiments import (
     build_robustness_comparison_to_run_immediate,
     build_scenario_summary,
     evaluate_agents,
+    bootstrap_confidence_intervals,
     plot_agent_comparison,
     plot_dataset_overview,
     plot_evaluation_overview,
@@ -184,6 +185,23 @@ def main() -> None:
 
     agent_summary.to_csv(agent_summary_path, index=False)
     agent_per_day.to_csv(agent_per_day_path, index=False)
+
+    bootstrap_ci = bootstrap_confidence_intervals(
+        per_day_df=agent_per_day,
+        metrics=[
+            "total_cost",
+            "renewable_usage_ratio",
+            "average_delay",
+            "missed_deadlines",
+            "total_reward",
+        ],
+        n_bootstrap=10_000,
+        confidence_level=0.95,
+        seed=config.seed + 20_000,
+    )
+
+    bootstrap_ci_path = config.results_dir / "bootstrap_confidence_intervals.csv"
+    bootstrap_ci.to_csv(bootstrap_ci_path, index=False)
 
     comparison_table = build_comparison_to_baseline(
         agent_summary,
@@ -409,6 +427,7 @@ def main() -> None:
     print(f"  - {agent_summary_path}")
     print(f"  - {agent_per_day_path}")
     print(f"  - {comparison_table_path}")
+    print(f"  - {bootstrap_ci_path}")
     print("- Scenario summaries:")
     print(f"  - {weather_summary_path}")
     print(f"  - {day_type_summary_path}")
