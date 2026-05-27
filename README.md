@@ -60,7 +60,7 @@ smart_home_energy_rl/
 
 ---
 
-## Setup
+## Setup (Windows)
 
 Create a virtual environment:
 
