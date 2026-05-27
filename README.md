@@ -478,20 +478,3 @@ Q-learning improves over naive immediate scheduling by reducing electricity cost
 ```
 
 ---
-
-## Notes for collaboration
-
-The `.venv/` folder should not be shared or committed.
-
-A collaborator should:
-
-1. clone or copy the project folder,
-2. create their own virtual environment,
-3. install dependencies from `requirements.txt`,
-4. run the project with:
-
-```powershell
-python -m smart_home_rl.main
-```
-
-The `.gitignore` file excludes virtual environments, Python cache files and generated experiment outputs.
