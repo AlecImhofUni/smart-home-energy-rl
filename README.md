@@ -471,10 +471,4 @@ The current results support the following interpretation:
 - Q-learning does not need to beat the strongest heuristic to be useful. The important result is that it learns a meaningful trade-off between cost, delay and deadline satisfaction.
 - Robustness experiments help identify where the learned policy generalizes well and where it has limitations.
 
-A typical conclusion is:
-
-```text
-Q-learning improves over naive immediate scheduling by reducing electricity cost while preserving deadline satisfaction, but it does not consistently outperform a handcrafted planning heuristic that directly uses future price and solar information.
-```
-
 ---
